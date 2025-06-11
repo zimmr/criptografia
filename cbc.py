@@ -1,33 +1,34 @@
+from base64 import b64encode
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+from Crypto.Random import get_random_bytes
 import os
 import math
 import sys
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import padding
+import json
 
-from base64 import b64encode
+# from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+# from cryptography.hazmat.backends import default_backend
+# from cryptography.hazmat.primitives import padding
 
-# from Crypto.Cipher import AES
-# from Crypto.Util.Padding import pad
-# from Crypto.Random import get_random_bytes
 
 #### Funções ####
-def get_blocks(file_path):
-    block_size = 16
+# def get_blocks(file_path):
+#     block_size = 16
 
-    file_size_bytes = os.path.getsize(file_path)
-    number_of_blocks = math.ceil(file_size_bytes / block_size)
+#     file_size_bytes = os.path.getsize(file_path)
+#     number_of_blocks = math.ceil(file_size_bytes / block_size)
 
-    file = open(file_path, "rb")
+#     file = open(file_path, "rb")
 
-    blocks = list(range(number_of_blocks))
+#     blocks = list(range(number_of_blocks))
 
-    byte = file.read(block_size)
-    while byte:
-        blocks.append(byte)
-        byte = file.read(block_size)
+#     byte = file.read(block_size)
+#     while byte:
+#         blocks.append(byte)
+#         byte = file.read(block_size)
 
-    return blocks
+#     return blocks
 
 def format_file_name(file_path, option):
     sufix = "cifrado" if option == "criptografar" else "decifrado"
@@ -38,55 +39,74 @@ def save_file(encrypted_text):
         fbinary.write(encrypted_text)
     return
 
-def encrypt_AES_CBC(data, key, iv):
-    padder = padding.PKCS7(128).padder()
-    padded_data = padder.update(data)
-    padded_data += padder.finalize()
+# def encrypt_AES_CBC(data, key, iv):
+#     padder = padding.PKCS7(128).padder()
+#     padded_data = padder.update(data)
+#     padded_data += padder.finalize()
 
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
-    encryptor = cipher.encryptor()
-    ciphertext = encryptor.update(padded_data) + encryptor.finalize()
-    return ciphertext
+#     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+#     encryptor = cipher.encryptor()
+#     ciphertext = encryptor.update(padded_data) + encryptor.finalize()
+#     return ciphertext
 
-def decrypt_AES_CBC(ciphertext, key, iv):
-    decryptor = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend()).decryptor()
-    decrypted_data = decryptor.update(ciphertext) + decryptor.finalize()
+# def decrypt_AES_CBC(ciphertext, key, iv):
+#     decryptor = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend()).decryptor()
+#     decrypted_data = decryptor.update(ciphertext) + decryptor.finalize()
 
-    unpadder = padding.PKCS7(128).unpadder()
-    unpadded_data = unpadder.update(decrypted_data)
-    unpadded_data += unpadder.finalize()
-    return unpadded_data
+#     unpadder = padding.PKCS7(128).unpadder()
+#     unpadded_data = unpadder.update(decrypted_data)
+#     unpadded_data += unpadder.finalize()
+#     return unpadded_data
 
-def encrypt(file_path, key, iv):
-    blocks = get_blocks(file_path)
-    filteredBlocks = filter(lambda x: not isinstance(x, int), blocks)
+def encrypt_ex(data, key):
+    # data = b"secret"
+    # key = get_random_bytes(16)
+    cipher = AES.new(key, AES.MODE_CBC)
+    ct_bytes = cipher.encrypt(pad(data, AES.block_size))
 
-    previous_block = iv
-    encrypted_text = list()
+    iv = b64encode(cipher.iv).decode('utf-8')
+    ct = b64encode(ct_bytes).decode('utf-8')
+    result = json.dumps({'iv':iv, 'ciphertext':ct})
+    print(result)
+    return ct
 
-    for block in filteredBlocks:
-        encrypted_block = encrypt_AES_CBC(block, key, previous_block)
-        encrypted_text += encrypted_block
-        previous_block = block
-
+def encrypt(file_path, key):
+    file = open(file_path, "rb")
+    encrypted_text = encrypt_ex(file, key)
     save_file(encrypted_text)
     return
 
-def decrypt(file_path, key):
-    blocks = get_blocks(file_path)
-    filteredBlocks = filter(lambda x: not isinstance(x, int), blocks)
-    reverseBlocks = filteredBlocks.reverse()
+# def encrypt_bk(file_path, key, iv):
+#     blocks = get_blocks(file_path)
+#     filteredBlocks = filter(lambda x: not isinstance(x, int), blocks)
 
-    previous_block = initialization_vector
-    decrypted_text = list()
+#     previous_block = iv
+#     encrypted_text = list()
 
-    for block in reverseBlocks:
-        decrypted_block = decrypt_AES_CBC(block, key, previous_block)
-        decrypted_text += decrypted_block
-        previous_block = block
+#     for block in filteredBlocks:
+#         # encrypted_block = encrypt_AES_CBC(block, key, previous_block)
+#         # encrypted_block = encrypt_ex(block, previous_block)
+#         encrypted_text += encrypted_block
+#         previous_block = block
 
-    save_file(decrypted_text)
-    return
+#     save_file(encrypted_text)
+#     return
+
+# def decrypt(file_path, key):
+#     blocks = get_blocks(file_path)
+#     filteredBlocks = filter(lambda x: not isinstance(x, int), blocks)
+#     reverseBlocks = filteredBlocks.reverse()
+
+#     previous_block = initialization_vector
+#     decrypted_text = list()
+
+#     for block in reverseBlocks:
+#         # decrypted_block = decrypt_AES_CBC(block, key, previous_block)
+#         decrypted_text += decrypted_block
+#         previous_block = block
+
+#     save_file(decrypted_text)
+#     return
 
 #### End funções ####
 
@@ -101,16 +121,17 @@ option = sys.argv[3]
 
 # TODO: gerar
 initialization_vector = "teste" # TODO: fazer isso
-cipher_key = algorithms.AES(input_key) # TODO: gerar chave
+
+cipher_key = AES.new(input_key.encode("utf-8"), AES.MODE_CBC)
 
 match option:
     case "criptografar":
         print("criptografando...")
-        encrypt(file_path, cipher_key, initialization_vector)
+        encrypt(file_path, cipher_key)
         quit()
     case "descriptografar":
         print("descriptografando...")
-        decrypt(file_path, cipher_key)
+        # decrypt(file_path, cipher_key)
         quit()
     case _:
         print("Erro: Opção inválida.")
